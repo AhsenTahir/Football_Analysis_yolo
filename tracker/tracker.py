@@ -77,3 +77,85 @@ class Tracker:
                     pickle.dump(tracks, f)
             return tracks
 
+    def draw_ellipse(self, frame, bbox, color, track_id=None):
+        # bbox is in the format [top left x, top left y, bottom right x, bottom right y]
+        y2 = int(bbox[3])
+        x_center, _ = get_center_of_the_box(bbox)
+        width = get_width_of_the_box(bbox)
+        height = int(width * 0.35)  # Height is 35% of the width
+
+        cv2.ellipse(frame,
+                    center=(x_center, y2),
+                    axes=(int(width), int(height)),
+                    # angle=-45,  # Rotation angle of the ellipse
+                    angle=-5,
+                    startAngle=0,  # Start angle of the arc
+                    endAngle=235,  # End angle of the arc
+                    color=color,
+                    thickness=2,
+                    lineType=cv2.LINE_AA)  # Antialiased line
+        rectangle_width=40
+        rectangle_height=20
+        x1_rect=x_center-rectangle_width//2
+        x2_rect=x_center+rectangle_width//2
+        y1_rect=(y2-rectangle_height//2)+15
+        y2_rect=(y2+rectangle_height//2)+15
+
+        if track_id is not None:
+            cv2.rectangle(frame,
+                           (int(x1_rect),int(y1_rect)),
+                           (int(x2_rect),int(y2_rect)),
+                           color,
+                           cv2.FILLED)
+            x1_text=x1_rect+12
+            if track_id is not None and track_id > 99:
+                x1_text-=10
+
+            cv2.putText(frame,
+                        f"{track_id}",
+                        (int(x1_text),int(y1_rect+15)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (0,0,0),
+                        2)
+        return frame
+    def draw_triangle(self, frame, bbox, color, track_id=None):
+        y= int(bbox[1])
+        x, _ = get_center_of_the_box(bbox)
+        triangle_points =np.array([
+            [x,y],
+            [x-10,y-20],
+            [x+10,y+20],
+        ])
+        cv2.drawContours(frame,[triangle_points],0,color,cv2 .FILLED)
+        cv2.drawContours(frame,[triangle_points],0,(0,0,0),2)
+
+    def draw_annotations(self, video_frames, tracks):
+        output_video_frames = []
+
+        for frame_num, frame in enumerate(video_frames):
+            frame = frame.copy()
+            player_dict = tracks["player"][frame_num]
+            referee_dict = tracks["referee"][frame_num]
+            ball_dict = tracks["ball"][frame_num]
+
+            for track_id, player in player_dict.items():
+                bbox = player["bbox"]
+                color=player.get("team_color",(0,0,255))
+                frame = self.draw_ellipse(frame, bbox, color,track_id)  # Draw ellipse with red color 
+                
+
+            for track_id, referee in referee_dict.items():
+                bbox = referee["bbox"]
+                frame = self.draw_ellipse(frame, bbox, (0, 255, 255),track_id)
+                # Draw ellipse with yellow color  
+
+            for track_id, ball in ball_dict.items():
+                bbox = ball["bbox"]
+                frame = self.draw_triangle(frame, bbox, (0, 255, 0),track_id)
+                # Draw triangle with green color  
+
+            output_video_frames.append(frame)
+
+        return output_video_frames
+
