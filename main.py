@@ -1,6 +1,6 @@
 from utils import read_video, save_video
 from tracker import Tracker
-
+from team_assigner import TeamAssigner
 def main():
     #reading the video
     video_frames = read_video("videos/1.mp4")
