@@ -1,6 +1,7 @@
 from utils import read_video, save_video
 from tracker import Tracker
 from team_assigner import TeamAssigner
+from player_assigner import PlayerAssigner
 def main():
     #reading the video
     video_frames = read_video("videos/1.mp4")
@@ -20,6 +21,19 @@ def main():
            team=team_assigner.get_player_team(video_frames[frame_num],track["bbox"],player_id)
            track['players'][frame_num][player_id]['team']=team
            track['players'][frame_num][player_id]['team_color']=team_assigner.team_colors[team]
+
+    player_assigner=PlayerAssigner()
+    team_possesion=[]
+    for frame_num,player_track in enumerate(tracks["player"]):
+        ball_bbox=tracks["ball"][frame_num][1]["bbox"]
+        assigned_player=player_assigner.assign_ball_to_player(player_track,ball_bbox)
+
+        if assigned_player!=-1:
+            tracks["player"][frame_num][assigned_player]["has_ball"]=True
+            team_possesion.append(tracks["player"][frame_num][assigned_player]["team"])
+        else:
+            team_possesion.append(-1)
+
    #save the video
     save_video(video_frames, "output_videos/output_video3.avi")
 
