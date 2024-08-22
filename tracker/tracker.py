@@ -14,6 +14,30 @@ class Tracker:
         self.model = YOLO(model_path)
         self.tracker = sv.ByteTrack()
 
+    def ball_interpolation(self, ball_tracks):
+        # ball_tracks is a list of dictionaries where each dictionary has only one key-value pair
+        # The key is the track ID and the value is a dictionary containing the bbox
+        # Example:
+        # [
+        #     {1: {"bbox": [100, 200, 150, 250]}},
+        #     {1: {"bbox": [110, 210, 160, 260]}},
+        #     {1: {"bbox": [120, 220, 170, 270]}},
+        #     {1: {"bbox": [130, 230, 180, 280]}},
+        #     {1: {"bbox": [140, 240, 190, 290]}},
+        #     {1: {"bbox": [150, 250, 200, 300]}},
+        #     {1: {"bbox": [160, 260, 210, 310]}},
+        #     {1: {"bbox": [170, 270, 220, 320]}},
+        #     {1: {"bbox": [180, 280, 230, 330]}},
+        #     {1: {"bbox": [190, 290, 240, 340]}},
+        # ]
+        # We need to interpolate the missing values in the bbox
+        ball_positions=[x.get(1,{}).get("bbox",[]) for x in ball_tracks]
+        df_ball_positions=pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
+        df_ball_positions=df_ball_positions.interpolate()
+        df_ball_positions=df_ball_positions.bfill()
+        ball_positions=[{1:{"bbox": x}} for x in df_ball_positions.to_numpy().tolist()]
+        return ball_positions
+    
     def detect_frames(self, frames):
         batch_size = 20
         detections = []

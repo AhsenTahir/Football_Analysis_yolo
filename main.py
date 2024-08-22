@@ -7,6 +7,9 @@ def main():
     tracker=Tracker('models/best_github.pt')
     
     tracks=tracker.get_object_tracks(video_frames,read_from_stub=True,stub_path='stubs/tracks.pkl')
+    tracks['ball']=tracker.ball_interpolation(tracks['ball'])
+
+
 
     team_assigner=TeamAssigner()
 
