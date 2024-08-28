@@ -2,12 +2,18 @@ from utils import read_video, save_video
 from tracker import Tracker
 from team_assigner import TeamAssigner
 from player_assigner import PlayerAssigner
+from camera_movement_estimation import CameraMovementEstimator
 def main():
     #reading the video
     video_frames = read_video("videos/1.mp4")
     tracker=Tracker('models/best_github.pt')
     
     tracks=tracker.get_object_tracks(video_frames,read_from_stub=True,stub_path='stubs/tracks.pkl')
+    
+    camera_movement_estimator=CameraMovementEstimator(video_frames[0])
+
+    camera_movement=camera_movement_estimator.get_camera_movement(video_frames,read_from_stub=True,stub_path='stubs/camera_movement.pkl')
+    
     tracks['ball']=tracker.ball_interpolation(tracks['ball'])
 
 
@@ -33,6 +39,10 @@ def main():
             team_possesion.append(tracks["player"][frame_num][assigned_player]["team"])
         else:
             team_possesion.append(-1)
+
+    output_video_frames = tracker.draw_annotations(video_frames, tracks,team_possesion)
+
+    output_video_frames=camera_movement_estimator.draw_camera_movement(output_video_frames,camera_movement_per_frame=camera_movement)
 
    #save the video
     save_video(video_frames, "output_videos/output_video3.avi")
