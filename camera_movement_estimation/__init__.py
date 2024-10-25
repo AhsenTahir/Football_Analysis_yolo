@@ -1,1 +1,1 @@
-from .camera_movement_extimation import CameraMovementEstimator
+from .camera_movement_estimation import CameraMovementEstimator
