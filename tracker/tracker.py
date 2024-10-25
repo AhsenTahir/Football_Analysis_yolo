@@ -6,6 +6,7 @@ import os
 import sys 
 import cv2
 import pandas as pd
+from sklearn.cluster import KMeans
 sys.path.append('.../')
 from utils import get_center_of_the_box, get_width_of_the_box
 
@@ -13,6 +14,8 @@ class Tracker:
     def __init__(self, model_path):
         self.model = YOLO(model_path)
         self.tracker = sv.ByteTrack()
+        self.team_colors = {}
+        self.player_team_dict = {}  # player_id:team
 
     def detect_frames(self, frames):
         batch_size = 20
@@ -46,6 +49,49 @@ class Tracker:
         ball_positions=[{1:{"bbox": x}} for x in df_ball_positions.to_numpy().tolist()]
         return ball_positions
     
+    def get_clustering_model(self, image):
+        image_2d = image.reshape(-1, 3)
+        kmeans = KMeans(n_clusters=2, init='k-means++', n_init=1, random_state=0)
+        kmeans.fit(image_2d)
+        return kmeans
+
+    def get_player_color(self, frame, bbox):
+        image = frame[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]
+        top_half_image = image[0:int(image.shape[0]/2), :]
+        kmeans = self.get_clustering_model(top_half_image)
+
+        labels = kmeans.labels_
+        clustered_image = labels.reshape(top_half_image.shape[0], top_half_image.shape[1])
+
+        corner_clusters = [clustered_image[0,0], clustered_image[0,-1], clustered_image[-1,0], clustered_image[-1,-1]]
+        non_player_cluster = max(set(corner_clusters), key=corner_clusters.count)
+        player_cluster = 1 if non_player_cluster == 0 else 0
+        player_color = kmeans.cluster_centers_[player_cluster]
+        return player_color
+
+    def assign_team_color(self, frame, player_detections):
+        player_colors = []
+        for _, player in player_detections.items():  # this have track_id:bbox in player_detection.items()
+            bbox = player['bbox']
+            player_color = self.get_player_color(frame, bbox)
+            player_colors.append(player_color)
+
+        kmeans = KMeans(n_clusters=2, init='k-means++', n_init=1, random_state=0)
+        kmeans.fit(player_colors)
+
+        self.kmeans = kmeans
+        self.team_colors[1] = kmeans.cluster_centers_[0]
+        self.team_colors[2] = kmeans.cluster_centers_[1]
+
+    def get_player_team(self, frame, player_bbox, player_id):
+        if player_id in self.player_team_dict:
+            return self.player_team_dict[player_id]
+        player_color = self.get_player_color(frame, player_bbox)
+        team_id = self.kmeans.predict(player_color.reshape(1, -1))[0]
+        team_id += 1
+        self.player_team_dict[player_id] = team_id
+        return team_id
+
     def get_object_tracks(self, frames, read_from_stub=False, stub_path=None):
         detections = self.detect_frames(frames)
         tracks = {
@@ -79,6 +125,16 @@ class Tracker:
                 cls_id = frame_detection[3]
                 if cls_id == cls_names_inv["ball"]:
                     tracks["ball"][frame_num][1] = {"bbox": bbox}
+
+        # After processing all frames, assign team colors
+        self.assign_team_color(frames[0], tracks["player"][0])  # Use the first frame to assign team colors
+        
+        # Assign team colors to all players in all frames
+        for frame_num, frame in enumerate(frames):
+            for track_id, player in tracks["player"][frame_num].items():
+                team_id = self.get_player_team(frame, player['bbox'], track_id)
+                tracks["player"][frame_num][track_id]['team_id'] = team_id
+                tracks["player"][frame_num][track_id]['team_color'] = self.team_colors[team_id]
 
         return tracks
 
@@ -147,7 +203,7 @@ class Tracker:
 
             for track_id, player in player_dict.items():
                 bbox = player["bbox"]
-                color = player.get("team_color", (0,0,255))
+                color = player.get("team_color", (0,0,255))  # Use assigned team color
                 frame = self.draw_ellipse(frame, bbox, color, track_id)
                 if player.get("has_ball", False):
                     frame = self.draw_triangle(frame, bbox, (0, 0, 255), track_id)
