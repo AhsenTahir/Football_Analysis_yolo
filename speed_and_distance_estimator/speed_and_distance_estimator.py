@@ -1,6 +1,6 @@
 import sys
 sys.path.append('..')
-from utils import measure_distance,getFootPosition
+from utils import measure_distance, getFootPosition
 import cv2
 
 class SpeedAnddistanceEstimator():
@@ -73,26 +73,27 @@ class SpeedAnddistanceEstimator():
         return tracks
 
     def draw_speed_and_distance(self, frames, tracks):
-        output_frames = []
+        output_frames = frames.copy()
         for frame_num, frame in enumerate(frames):
             for object, object_tracks in tracks.items():
                 if object == "ball" or object == "referees":
                     continue
-                for track_id, track in object_tracks[frame_num].items():
-                    if "speed" in track:
-                        speed = track.get('speed', None)
-                        distance = track.get('distance', None)
-                        if speed is None or distance is None:
-                            continue
+                if frame_num >= len(object_tracks):
+                    continue
+
+                frame_tracks = object_tracks[frame_num]
+                for track_id, track in frame_tracks.items():
+                    speed = track.get('speed')
+                    distance = track.get('distance')
+                    if speed is not None and distance is not None:
                         bbox = track['bbox']
                         position = getFootPosition(bbox)
                         position = list(position)
                         position[1] += 40
-
                         position = tuple(map(int, position))
                         cv2.putText(frame, f"{speed:.2f} km/h", position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
                         cv2.putText(frame, f"{distance:.2f} m", (position[0], position[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
 
-            output_frames.append(frame)
+            output_frames[frame_num] = frame
 
         return output_frames

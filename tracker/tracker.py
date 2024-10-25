@@ -8,7 +8,7 @@ import cv2
 import pandas as pd
 from sklearn.cluster import KMeans
 sys.path.append('.../')
-from utils import get_center_of_the_box, get_width_of_the_box
+from utils import get_center_of_the_box, get_width_of_the_box, getFootPosition
 
 class Tracker:
     def __init__(self, model_path):
@@ -221,3 +221,41 @@ class Tracker:
             output_video_frames.append(frame)
 
         return output_video_frames
+
+    def AddPositionsToTrack(self, track):
+        for object_name, objects_track in track.items():
+            for frame_num, frame in enumerate(objects_track):
+                for track_id, track_info in frame.items():
+                    if 'bbox' in track_info:
+                        bbox = track_info["bbox"]
+                        if object_name == "ball":
+                            position = get_center_of_the_box(bbox)
+                        else:
+                            position = getFootPosition(bbox)
+                        frame[track_id]["position"] = position
+                        frame[track_id]["position_transformed"] = position  # Add this line
+        return track
+
+    def draw_team_ball_control(self, frame, frame_num, team_possession):
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (1350, 850), (1900, 970), (255, 255, 255), cv2.FILLED)
+        alpha = 0.4
+        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+        
+        team_ball_control_till_frame = team_possession[:frame_num+1]
+        team_ball_control_till_frame_np = np.array(team_ball_control_till_frame)
+
+        total_frames = len(team_ball_control_till_frame_np)
+        team_1_frames = np.sum(team_ball_control_till_frame_np == 1)
+        team_2_frames = np.sum(team_ball_control_till_frame_np == 2)
+        
+        # Calculate percentages
+        team_1_percentage = (team_1_frames / total_frames) * 100 if total_frames > 0 else 0
+        team_2_percentage = (team_2_frames / total_frames) * 100 if total_frames > 0 else 0
+        
+        # Draw the percentages on the frame
+        cv2.putText(frame, f"Team 1 Possession: {team_1_percentage:.1f}%", (1370, 900), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame, f"Team 2 Possession: {team_2_percentage:.1f}%", (1370, 940), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        
+        return frame
+
