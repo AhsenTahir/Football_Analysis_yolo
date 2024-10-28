@@ -1,7 +1,7 @@
 # VisionPlay: Next-Gen Sports Analytics using Deep Learning
 VisionPlay is an advanced sports analytics system leveraging deep learning and computer vision to analyze soccer match footage in real-time. By tracking players, referees, and the ball, VisionPlay provides actionable insights into player performance, team strategies, and game dynamics.
 ## Demo
-![Demo](gif/demo.png)
+![Demo](demo/demo.png)
 
 ## Project Overview
 VisionPlay utilizes state-of-the-art algorithms to analyze soccer videos, offering comprehensive features for coaches, analysts, and fans:
@@ -59,6 +59,11 @@ Install the necessary Python libraries by running:
 ```bash
 pip install -r requirements.txt
 ```
+## GPU Support for PyTorch
+If you intend to leverage GPU acceleration, follow these steps to set up PyTorch with CUDA support:
+
+CUDA Toolkit: Install CUDA Toolkit compatible with your GPU and your PyTorch version (CUDA 11.8 or above is recommended).
+NVIDIA Drivers: Ensure you have the latest NVIDIA drivers installed.
 ## Running VisionPlay
 To start analyzing a video with VisionPlay:
 
