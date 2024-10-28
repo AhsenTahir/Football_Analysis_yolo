@@ -1,5 +1,7 @@
 # VisionPlay: Next-Gen Sports Analytics using Deep Learning
 VisionPlay is an advanced sports analytics system leveraging deep learning and computer vision to analyze soccer match footage in real-time. By tracking players, referees, and the ball, VisionPlay provides actionable insights into player performance, team strategies, and game dynamics.
+## Demo
+![Demo](gif/output.gif)
 
 ## Project Overview
 VisionPlay utilizes state-of-the-art algorithms to analyze soccer videos, offering comprehensive features for coaches, analysts, and fans:
